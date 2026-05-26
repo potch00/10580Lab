@@ -33,7 +33,7 @@ if prompt := st.chat_input("챗봇에게 메시지를 보내보세요!"):
             stream = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "m.role", "content": m["content"]}
+                    {"role": m["role"], "content": m["content"]}
                     for m in st.session_state.messages
                 ],
                 stream=True,
