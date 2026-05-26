@@ -3,7 +3,7 @@ from openai import OpenAI
 import time
 
 st.set_page_config(page_title="ChatPDF", layout="centered")
-st.title("ChatPDF (OpenAI File Search 정석)")
+st.title("ChatPDF")
 st.caption("OpenAI 고유의 File Search(Vector Store) 기능을 사용하는 페이지입니다.")
 
 if "openai_api_key" not in st.session_state or not st.session_state["openai_api_key"]:
