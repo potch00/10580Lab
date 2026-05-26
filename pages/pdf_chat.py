@@ -28,10 +28,11 @@ def clear_pdf_session():
         if st.session_state.assistant_id:
             client.beta.assistants.delete(st.session_state.assistant_id)
         if st.session_state.vector_store_id:
-            client.beta.vector_stores.delete(st.session_state.vector_store_id)
+            if hasattr(client.beta, "vector_stores"):
+                client.beta.vector_stores.delete(st.session_state.vector_store_id)
         if st.session_state.uploaded_file_id:
             client.files.delete(st.session_state.uploaded_file_id)
-    except Exception as e:
+    except Exception:
         pass
     
     st.session_state.pdf_messages = []
@@ -48,7 +49,7 @@ if st.button("Clear (Vector Store 및 대화 내용 삭제)"):
 uploaded_file = st.file_uploader("PDF 파일을 업로드 하세요 (1개 제한)", type=["pdf"], accept_multiple_files=False)
 
 if uploaded_file and not st.session_state.vector_store_id:
-    with st.spinner("OpenAI File Search를 위한 Vector Store 생성 및 파일 분석 중..."):
+    with st.spinner("OpenAI File Search 설정 중... 잠시만 기다려주세요."):
         try:
             file_response = client.files.create(
                 file=(uploaded_file.name, uploaded_file.getvalue(), "application/pdf"),
@@ -56,10 +57,16 @@ if uploaded_file and not st.session_state.vector_store_id:
             )
             st.session_state.uploaded_file_id = file_response.id
 
-            vector_store = client.beta.vector_stores.create(name=f"VS_{uploaded_file.name}")
+            if hasattr(client.beta, "vector_stores"):
+                vs_client = client.beta.vector_stores
+            else:
+                from openai.resources.beta import VectorStores
+                vs_client = VectorStores(client)
+
+            vector_store = vs_client.create(name=f"VS_{uploaded_file.name}")
             st.session_state.vector_store_id = vector_store.id
             
-            file_batch = client.beta.vector_stores.file_batches.create_and_poll(
+            vs_client.file_batches.create_and_poll(
                 vector_store_id=vector_store.id,
                 file_ids=[file_response.id]
             )
@@ -113,9 +120,7 @@ if prompt := st.chat_input("업로드한 PDF에 대해 궁금한 점을 물어�
                     messages = client.beta.threads.messages.list(
                         thread_id=st.session_state.thread_id
                     )
-
                     assistant_response = messages.data[0].content[0].text.value
-                    
                     st.markdown(assistant_response)
                     st.session_state.pdf_messages.append({"role": "assistant", "content": assistant_response})
                 else:
